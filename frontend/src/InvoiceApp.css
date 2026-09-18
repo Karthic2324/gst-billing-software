@@ -1,0 +1,196 @@
+.billing-container {
+  padding: 20px;
+  background-color: #eef2f7;
+  font-family: Arial, sans-serif;
+}
+
+.control-panel {
+  width: 800px;
+  margin: 0 auto 20px auto;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.control-buttons {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.btn-save { background-color: #007bff; color: white; }
+.btn-print { background-color: #28a745; color: white; }
+.btn-add { background-color: #17a2b8; color: white; padding: 5px 15px; border: none; border-radius: 3px; cursor: pointer; }
+.btn-remove { background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; padding: 2px 6px; }
+
+.invoice-box {
+  width: 800px;
+  margin: auto;
+  background: white;
+  border: 2px solid #000;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.invoice-header {
+  font-weight: bold;
+  border-bottom: 1px solid #000;
+  padding-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.grid-2 {
+  display: flex;
+  border-bottom: 1px solid #000;
+}
+
+.box {
+  flex: 1;
+  padding: 8px;
+}
+
+.box:first-child {
+  border-right: 1px solid #000;
+}
+
+.meta-box {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ship-to-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.checkbox-label {
+  font-size: 11px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  margin-right: 4px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: -1px;
+}
+
+th, td {
+  border: 1px solid #000;
+  padding: 5px;
+  text-align: center;
+}
+
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+
+.form-group {
+  margin-bottom: 5px;
+}
+
+.form-row {
+  display: flex;
+  gap: 5px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.editable-input, .editable-textarea {
+  border: 1px dashed #ccc;
+  padding: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  background-color: #fafafa;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.editable-input:focus, .editable-textarea:focus {
+  border: 1px solid #007bff;
+  background-color: #fff;
+  outline: none;
+}
+
+.disabled-textarea {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+/* Auto Suggestion Dropdown Styling */
+.suggestion-cell {
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #007bff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  z-index: 100;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 150px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.suggestions-dropdown li {
+  padding: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestions-dropdown li:hover {
+  background-color: #f0f7ff;
+}
+
+.suggestions-dropdown li span {
+  font-size: 10px;
+  color: #666;
+}
+
+.sign-box {
+  text-align: right;
+  margin-top: 15px;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .billing-container { padding: 0; background: white; }
+  .invoice-box { border: 1px solid #000; width: 100%; margin: 0; }
+  .editable-input, .editable-textarea {
+    border: none;
+    background: transparent;
+    resize: none;
+    padding: 0;
+  }
+}
