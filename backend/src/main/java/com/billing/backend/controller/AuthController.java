@@ -8,24 +8,27 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AuthController {
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
+    @RequestMapping(value = {"/api/auth/login", "/api/login"}, method = {RequestMethod.POST, RequestMethod.OPTIONS})
+    public ResponseEntity<?> login(@RequestBody(required = false) Map<String, String> loginRequest) {
+        if (loginRequest == null) {
+            return ResponseEntity.ok().build(); // Return 200 OK for OPTIONS pre-flight checks
+        }
+
         String username = loginRequest.get("username");
         String password = loginRequest.get("password");
 
-        // Hardcoded credentials for testing/staff login
-        if (("admin".equalsIgnoreCase(username) && "admin123".equals(password)) ||
-            ("admin".equalsIgnoreCase(username) && "omaew".equals(password)) ||
-            ("staff".equalsIgnoreCase(username) && "omaew123".equals(password))) {
-            
+        boolean isAdmin = "admin".equalsIgnoreCase(username) && 
+            ("admin123".equals(password) || "omaew".equals(password));
+        boolean isStaff = "staff".equalsIgnoreCase(username) && "omaew123".equals(password);
+
+        if (isAdmin || isStaff) {
             Map<String, Object> response = new HashMap<>();
             response.put("token", "session-token-" + System.currentTimeMillis());
             response.put("username", username);
-            response.put("role", "admin".equalsIgnoreCase(username) ? "ADMIN" : "STAFF");
+            response.put("role", isAdmin ? "ADMIN" : "STAFF");
             return ResponseEntity.ok(response);
         }
 
