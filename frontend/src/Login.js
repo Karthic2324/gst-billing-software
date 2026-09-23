@@ -46,7 +46,7 @@ const Login = ({ BASE_URL, onLoginSuccess }) => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
-            placeholder="admin or staff"
+            placeholder="Enter username"
           />
         </div>
 
@@ -58,7 +58,7 @@ const Login = ({ BASE_URL, onLoginSuccess }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
-            placeholder="omaew or omaew123"
+            placeholder="Enter password"
           />
         </div>
 
