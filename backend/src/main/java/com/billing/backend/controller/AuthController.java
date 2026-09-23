@@ -1,5 +1,6 @@
 package com.billing.backend.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,8 @@ public class AuthController {
         String password = loginRequest.get("password");
 
         // Hardcoded credentials for testing/staff login
-        if (("admin".equalsIgnoreCase(username) && "omaew".equals(password)) ||
+        if (("admin".equalsIgnoreCase(username) && "admin123".equals(password)) ||
+            ("admin".equalsIgnoreCase(username) && "omaew".equals(password)) ||
             ("staff".equalsIgnoreCase(username) && "omaew123".equals(password))) {
             
             Map<String, Object> response = new HashMap<>();
@@ -29,6 +31,6 @@ public class AuthController {
 
         Map<String, String> error = new HashMap<>();
         error.put("message", "Invalid username or password.");
-        return ResponseEntity.status(401).body(error);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 }
