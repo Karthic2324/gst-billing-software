@@ -16,7 +16,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/invoices")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class InvoiceController {
 
     @Autowired
@@ -27,10 +27,10 @@ public class InvoiceController {
 
     @PostMapping
     public ResponseEntity<Invoice> createInvoice(@RequestBody Invoice invoice) {
-        // 1. Save the invoice
+        // 1. Save complete invoice data (includes nested items and tax breakdowns)
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        // 2. Automatically register/update products in master database for future suggestions
+        // 2. Automatically store new products in the master catalog for future auto-complete
         if (invoice.getItems() != null) {
             for (InvoiceItem item : invoice.getItems()) {
                 if (item.getItemDescription() != null && !item.getItemDescription().trim().isEmpty()) {
