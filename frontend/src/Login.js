@@ -8,13 +8,16 @@ const Login = ({ BASE_URL, onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Fallback to explicit Render backend URL if BASE_URL is not passed or empty
+  const API_BASE = (BASE_URL || 'https://om-muruga-auto-electrical-works.onrender.com').replace(/\/$/, '');
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await axios.post(`${BASE_URL}/api/auth/login`, { username, password });
+      const response = await axios.post(`${API_BASE}/api/auth/login`, { username, password });
       if (response.data && response.data.token) {
         setToken(response.data.token);
         setUser({ username: response.data.username, role: response.data.role });
@@ -55,7 +58,7 @@ const Login = ({ BASE_URL, onLoginSuccess }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
-            placeholder="admin123 or staff123"
+            placeholder="omaew or omaew123"
           />
         </div>
 
