@@ -1,16 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { getToken } from './auth';
 import './InvoiceApp.css';
 
-const InvoiceApp = () => {
+// Helper function to convert numeric numbers to words
+const numberToWords = (num) => {
+  if (!num || isNaN(num)) return 'Zero Rupees Only';
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  const inWords = (n) => {
+    if ((n = n.toString()).length > 9) return 'overflow';
+    let n_array = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n_array) return '';
+    let str = '';
+    str += (n_array[1] != 0) ? (a[Number(n_array[1])] || b[n_array[1][0]] + ' ' + a[n_array[1][1]]) + 'Crore ' : '';
+    str += (n_array[2] != 0) ? (a[Number(n_array[2])] || b[n_array[2][0]] + ' ' + a[n_array[2][1]]) + 'Lakh ' : '';
+    str += (n_array[3] != 0) ? (a[Number(n_array[3])] || b[n_array[3][0]] + ' ' + a[n_array[3][1]]) + 'Thousand ' : '';
+    str += (n_array[4] != 0) ? (a[Number(n_array[4])] || b[n_array[4][0]] + ' ' + a[n_array[4][1]]) + 'Hundred ' : '';
+    str += (n_array[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_array[5])] || b[n_array[5][0]] + ' ' + a[n_array[5][1]]) : '';
+    return str;
+  };
+
+  const whole = Math.floor(num);
+  const words = inWords(whole);
+  return `${words.trim()} Rupees Only`;
+};
+
+const InvoiceApp = ({ BASE_URL }) => {
   const [sameAsBilling, setSameAsBilling] = useState(false);
   const [activeSuggestionRow, setActiveSuggestionRow] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
 
-  const [invoice, setInvoice] = useState({
+  const getAuthHeaders = () => {
+    const token = getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const initialInvoiceState = {
     invoiceNo: 'MB/SL/26-27/1001',
     invoiceDate: new Date().toISOString().split('T')[0],
-    sellerName: ' Om Muruga Auto Electrical Works 🦚',
+    sellerName: 'Om Muruga Auto Electrical Works 🦚',
     sellerAddress: '6/1 , Siddhi Vinayagar Colony, Linganoor, Siruvani Road, Veerakeralam, Coimbatore - 641 007.',
     sellerGstin: '33DSSPS7678B1Z2',
     sellerContact: '9976765151 / 8098986464',
@@ -20,104 +50,57 @@ const InvoiceApp = () => {
     buyerPan: '',
     placeOfSupply: 'Tamil Nadu',
     shippingAddress: '',
-    bankName: 'ICICI Bank, COIMBATORE GANAPATHY',
-    bankIfsc: 'ICIC0004179',
-    bankAccountNo: '417905500050',
+    Name:'',
+    bankName: '',
+    bankIfsc: '',
+    bankAccountNo: '',
     receivedAmount: 0,
     items: [
-      {
-        sNo: 1,
-        itemDescription: '',
-        hsnSac: '',
-        qty: 1,
-        unit: 'NOS',
-        rate: 0
-      }
+      { sNo: 1, itemDescription: '', hsnSac: '', qty: 1, unit: 'NOS', rate: 0 }
     ]
-  });
+  };
 
-  // Fetch the next invoice number when app opens
-  useEffect(() => {
-    fetchNextInvoiceNumber();
-  }, []);
+  const [invoice, setInvoice] = useState(initialInvoiceState);
 
-  const fetchNextInvoiceNumber = async () => {
+  const fetchNextInvoiceNumber = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:8080/api/invoices/next-number');
+      const res = await axios.get(`${BASE_URL}/api/invoices/next-number`, { headers: getAuthHeaders() });
       if (res.data && res.data.nextInvoiceNo) {
         setInvoice((prev) => ({ ...prev, invoiceNo: res.data.nextInvoiceNo }));
       }
     } catch (error) {
-      console.error('Could not fetch next invoice number:', error);
+      console.error('Error fetching invoice number:', error);
     }
-  };
+  }, [BASE_URL]);
 
-  // Reset form for the next bill
-  const resetFormForNextInvoice = (nextInvoiceNo) => {
-    setInvoice({
-      invoiceNo: nextInvoiceNo,
-      invoiceDate: new Date().toISOString().split('T')[0],
-      sellerName: ' Om Muruga Auto Electrical Works 🦚 ',
-      sellerAddress: '6/1 , Siddhi Vinayagar Colony, Linganoor, Siruvani Road, Veerakeralam, Coimbatore - 641 007.',
-      sellerGstin: '33DSSPS7678B1Z2',
-      sellerContact: '9976765151 / 8098986464',
-      buyerName: '',
-      buyerAddress: '',
-      buyerGstin: '',
-      buyerPan: '',
-      placeOfSupply: 'Tamil Nadu',
-      shippingAddress: '',
-      bankName: 'ICICI Bank, COIMBATORE GANAPATHY',
-      bankIfsc: 'ICIC0004179',
-      bankAccountNo: '417905500050',
-      receivedAmount: 0,
-      items: [
-        {
-          sNo: 1,
-          itemDescription: '',
-          hsnSac: '',
-          qty: 1,
-          unit: 'NOS',
-          rate: 0
-        }
-      ]
-    });
-    setSameAsBilling(false);
-  };
+  useEffect(() => {
+    fetchNextInvoiceNumber();
+  }, [fetchNextInvoiceNumber]);
 
-  // Handle general field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const updatedInvoice = { ...invoice, [name]: value };
+    const updated = { ...invoice, [name]: value };
 
     if (sameAsBilling && (name === 'buyerAddress' || name === 'buyerName')) {
-      const updatedName = name === 'buyerName' ? value : invoice.buyerName;
-      const updatedAddr = name === 'buyerAddress' ? value : invoice.buyerAddress;
-      updatedInvoice.shippingAddress = `${updatedName}\n${updatedAddr}`.trim();
+      const bName = name === 'buyerName' ? value : invoice.buyerName;
+      const bAddr = name === 'buyerAddress' ? value : invoice.buyerAddress;
+      updated.shippingAddress = `${bName}\n${bAddr}`.trim();
     }
 
-    setInvoice(updatedInvoice);
+    setInvoice(updated);
   };
 
-  // Toggle "Same as Billing Address"
   const handleCheckboxChange = (e) => {
     const isChecked = e.target.checked;
     setSameAsBilling(isChecked);
-
     if (isChecked) {
       setInvoice({
         ...invoice,
         shippingAddress: `${invoice.buyerName}\n${invoice.buyerAddress}`.trim()
       });
-    } else {
-      setInvoice({
-        ...invoice,
-        shippingAddress: ''
-      });
     }
   };
 
-  // Handle item input & fetch database search suggestions
   const handleItemChange = async (index, e) => {
     const { name, value } = e.target;
     const updatedItems = [...invoice.items];
@@ -128,10 +111,10 @@ const InvoiceApp = () => {
       setActiveSuggestionRow(index);
       if (value.trim().length > 0) {
         try {
-          const res = await axios.get(`http://localhost:8080/api/products/search?query=${encodeURIComponent(value)}`);
+          const res = await axios.get(`${BASE_URL}/api/products/search?query=${encodeURIComponent(value)}`, { headers: getAuthHeaders() });
           setSuggestions(res.data);
         } catch (err) {
-          console.error('Error fetching product suggestions:', err);
+          console.error('Error fetching suggestions:', err);
         }
       } else {
         setSuggestions([]);
@@ -139,90 +122,62 @@ const InvoiceApp = () => {
     }
   };
 
-  // Select item from suggestion list
-  const handleSelectSuggestion = (index, product) => {
+  const selectSuggestion = (index, product) => {
     const updatedItems = [...invoice.items];
     updatedItems[index].itemDescription = product.itemDescription;
     updatedItems[index].hsnSac = product.hsnSac || '';
     updatedItems[index].rate = product.rate || 0;
-
     setInvoice({ ...invoice, items: updatedItems });
     setActiveSuggestionRow(null);
     setSuggestions([]);
   };
 
-  // Add new item row
   const addItemRow = () => {
     setInvoice({
       ...invoice,
       items: [
         ...invoice.items,
-        {
-          sNo: invoice.items.length + 1,
-          itemDescription: '',
-          hsnSac: '',
-          qty: 1,
-          unit: 'NOS',
-          rate: 0
-        }
+        { sNo: invoice.items.length + 1, itemDescription: '', hsnSac: '', qty: 1, unit: 'NOS', rate: 0 }
       ]
     });
   };
 
-  // Remove item row
   const removeItemRow = (index) => {
     const updatedItems = invoice.items.filter((_, i) => i !== index);
     const reindexed = updatedItems.map((item, idx) => ({ ...item, sNo: idx + 1 }));
     setInvoice({ ...invoice, items: reindexed });
   };
 
-  // Calculations
-  const calculateItemValues = (item) => {
+  const calculateRowValues = (item) => {
     const qty = Number(item.qty) || 0;
     const rate = Number(item.rate) || 0;
     const taxableValue = qty * rate;
-    const taxAmount = taxableValue * 0.18; // 18% GST (9% CGST + 9% SGST)
+    const taxAmount = taxableValue * 0.18;
     const totalAmount = taxableValue + taxAmount;
     return { taxableValue, taxAmount, totalAmount };
   };
 
-  const getSummary = () => {
-    let totalQty = 0;
-    let totalTax = 0;
-    let totalAmount = 0;
+  const totals = invoice.items.reduce((acc, item) => {
+    const vals = calculateRowValues(item);
+    acc.totalQty += Number(item.qty) || 0;
+    acc.totalTax += vals.taxAmount;
+    acc.grandTotal += vals.totalAmount;
+    return acc;
+  }, { totalQty: 0, totalTax: 0, grandTotal: 0 });
 
-    invoice.items.forEach((item) => {
-      const vals = calculateItemValues(item);
-      totalQty += Number(item.qty) || 0;
-      totalTax += vals.taxAmount;
-      totalAmount += vals.totalAmount;
-    });
+  const handleSaveAndNext = async () => {
+    if (!invoice.buyerName.trim()) {
+      alert('Please enter Buyer Name before saving.');
+      return;
+    }
 
-    return { totalQty, totalTax, totalAmount };
-  };
-
-  const summary = getSummary();
-
-  // Save Invoice to Database
-  const handleSaveBackend = async () => {
     const payload = {
       ...invoice,
-      totalQty: summary.totalQty,
-      totalTax: summary.totalTax,
-      totalAmount: summary.totalAmount,
-      taxBreakdowns: invoice.items.map((item) => {
-        const vals = calculateItemValues(item);
-        return {
-          hsnSac: item.hsnSac,
-          taxableValue: vals.taxableValue.toFixed(2),
-          cgstRate: 9,
-          cgstAmount: (vals.taxAmount / 2).toFixed(2),
-          sgstRate: 9,
-          sgstAmount: (vals.taxAmount / 2).toFixed(2)
-        };
-      }),
+      totalQty: totals.totalQty,
+      totalTax: totals.totalTax,
+      totalAmount: totals.grandTotal,
       items: invoice.items.map((item) => {
-        const vals = calculateItemValues(item);
+        const vals = calculateRowValues(item);
         return {
           ...item,
           taxAmount: Number(vals.taxAmount.toFixed(2)),
@@ -232,16 +187,25 @@ const InvoiceApp = () => {
     };
 
     try {
-      await axios.post('http://localhost:8080/api/invoices', payload);
-      alert(`Invoice ${invoice.invoiceNo} saved & products stored in database! Form ready for next bill.`);
+      await axios.post(`${BASE_URL}/api/invoices`, payload, { headers: getAuthHeaders() });
+      alert(`Invoice ${invoice.invoiceNo} saved successfully!`);
 
-      // Fetch auto-incremented invoice number for the next bill
-      const nextRes = await axios.get('http://localhost:8080/api/invoices/next-number');
-      resetFormForNextInvoice(nextRes.data.nextInvoiceNo);
+      const res = await axios.get(`${BASE_URL}/api/invoices/next-number`, { headers: getAuthHeaders() });
+      const nextNo = res.data?.nextInvoiceNo || 'MB/SL/26-27/1001';
 
-    } catch (error) {
-      console.error('Error saving invoice:', error);
-      alert('Failed to save invoice. Make sure Spring Boot server is running.');
+      setInvoice({
+        ...initialInvoiceState,
+        invoiceNo: nextNo,
+        buyerName: '',
+        buyerAddress: '',
+        buyerGstin: '',
+        buyerPan: '',
+        shippingAddress: '',
+        items: [{ sNo: 1, itemDescription: '', hsnSac: '', qty: 1, unit: 'NOS', rate: 0 }]
+      });
+      setSameAsBilling(false);
+    } catch (err) {
+      alert('Failed to save invoice. Ensure Spring Boot backend is running.');
     }
   };
 
@@ -249,15 +213,20 @@ const InvoiceApp = () => {
     <div className="billing-container">
       {/* Control Panel Header */}
       <div className="no-print control-panel">
-        <h2>GST Billing Software</h2>
-        <p>Current Invoice No: <strong>{invoice.invoiceNo}</strong>. Products typed here are permanently stored in the database for future suggestions.</p>
-        <div className="control-buttons">
-          <button className="btn btn-save" onClick={handleSaveBackend}>Save & Next Invoice</button>
-          <button className="btn btn-print" onClick={() => window.print()}>Print / Save PDF</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, color: '#f8fafc' }}>Invoice Workstation</h3>
+          <div className="control-buttons">
+            <button className="btn-add-item" style={{ backgroundColor: '#10b981' }} onClick={handleSaveAndNext}>
+              Save & Next Invoice
+            </button>
+            <button className="btn-add-item" onClick={() => window.print()}>
+              Print / Save PDF
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Invoice Box */}
+      {/* Main Invoice Printable Sheet (Structured Layout) */}
       <div className="invoice-box" id="printable-invoice">
         <div className="invoice-header">
           <span>TAX INVOICE</span>
@@ -267,12 +236,12 @@ const InvoiceApp = () => {
         {/* Seller Info & Invoice Metadata */}
         <div className="grid-2">
           <div className="box">
-            <h3>{invoice.sellerName}</h3>
-            <p>{invoice.sellerAddress}</p>
-            <p><strong>GSTIN:</strong> {invoice.sellerGstin}</p>
-            <h3><strong>Contact:</strong> {invoice.sellerContact}</h3>
+            <h2 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{invoice.sellerName}</h2>
+            <p style={{ margin: '0 0 4px 0' }}>{invoice.sellerAddress}</p>
+            <p style={{ margin: '0 0 2px 0' }}><strong>GSTIN:</strong> {invoice.sellerGstin}</p>
+            <p style={{ margin: 0 }}><strong>Contact:</strong> {invoice.sellerContact}</p>
           </div>
-          <div className="box meta-box">
+          <div className="box" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <div>
               <strong>Invoice No.</strong><br />
               <input
@@ -280,7 +249,8 @@ const InvoiceApp = () => {
                 name="invoiceNo"
                 value={invoice.invoiceNo}
                 onChange={handleChange}
-                className="editable-input"
+                className="form-control-input"
+                style={{ width: '130px', fontWeight: 'bold' }}
               />
             </div>
             <div>
@@ -290,7 +260,8 @@ const InvoiceApp = () => {
                 name="invoiceDate"
                 value={invoice.invoiceDate}
                 onChange={handleChange}
-                className="editable-input"
+                className="form-control-input"
+                style={{ width: '130px' }}
               />
             </div>
           </div>
@@ -299,35 +270,33 @@ const InvoiceApp = () => {
         {/* Bill To & Ship To Details */}
         <div className="grid-2">
           <div className="box">
-            <strong>BILL TO:</strong>
-            <div className="form-group">
-              <input
-                type="text"
-                name="buyerName"
-                placeholder="Buyer / Company Name"
-                value={invoice.buyerName}
-                onChange={handleChange}
-                className="editable-input full-width"
-              />
-            </div>
-            <div className="form-group">
-              <textarea
-                name="buyerAddress"
-                placeholder="Billing Address"
-                value={invoice.buyerAddress}
-                onChange={handleChange}
-                className="editable-textarea full-width"
-                rows="2"
-              />
-            </div>
-            <div className="form-row">
+            <strong>BILL TO</strong><br />
+            <input
+              type="text"
+              name="buyerName"
+              placeholder="BUYER NAME"
+              value={invoice.buyerName}
+              onChange={handleChange}
+              className="form-control-input"
+              style={{ width: '100%', fontWeight: 'bold', margin: '2px 0' }}
+            />
+            <textarea
+              name="buyerAddress"
+              placeholder="Billing Address..."
+              value={invoice.buyerAddress}
+              onChange={handleChange}
+              className="editable-textarea"
+              rows="2"
+            />
+            <div style={{ display: 'flex', gap: '5px', marginTop: '4px' }}>
               <input
                 type="text"
                 name="buyerGstin"
                 placeholder="Buyer GSTIN"
                 value={invoice.buyerGstin}
                 onChange={handleChange}
-                className="editable-input"
+                className="form-control-input"
+                style={{ flex: 1 }}
               />
               <input
                 type="text"
@@ -335,34 +304,47 @@ const InvoiceApp = () => {
                 placeholder="Place of Supply"
                 value={invoice.placeOfSupply}
                 onChange={handleChange}
-                className="editable-input"
+                className="form-control-input"
+                style={{ flex: 1 }}
+              />
+            </div>
+            <div style={{ marginTop: '2px' }}>
+              <strong>PAN Number:</strong>{' '}
+              <input
+                type="text"
+                name="buyerPan"
+                placeholder="PAN"
+                value={invoice.buyerPan}
+                onChange={handleChange}
+                className="form-control-input"
+                style={{ width: '120px' }}
               />
             </div>
           </div>
 
           <div className="box">
-            <div className="ship-to-header">
-              <strong>SHIP TO:</strong>
-              <label className="checkbox-label no-print">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong>SHIP TO</strong>
+              <label style={{ fontSize: '10px', cursor: 'pointer' }} className="no-print">
                 <input
                   type="checkbox"
                   checked={sameAsBilling}
                   onChange={handleCheckboxChange}
+                  style={{ marginRight: '3px' }}
                 />
                 Same as Bill To
               </label>
             </div>
-            <div className="form-group" style={{ marginTop: '5px' }}>
-              <textarea
-                name="shippingAddress"
-                placeholder="Shipping Address"
-                value={invoice.shippingAddress}
-                onChange={handleChange}
-                disabled={sameAsBilling}
-                className={`editable-textarea full-width ${sameAsBilling ? 'disabled-textarea' : ''}`}
-                rows="4"
-              />
-            </div>
+            <textarea
+              name="shippingAddress"
+              placeholder="Shipping Address..."
+              value={invoice.shippingAddress}
+              onChange={handleChange}
+              disabled={sameAsBilling}
+              className="editable-textarea"
+              rows="4"
+              style={{ marginTop: '4px' }}
+            />
           </div>
         </div>
 
@@ -370,45 +352,41 @@ const InvoiceApp = () => {
         <table className="main-table">
           <thead>
             <tr>
-              <th>S.NO.</th>
-              <th>ITEMS DESCRIPTION</th>
-              <th>HSN/SAC</th>
-              <th>QTY.</th>
-              <th>RATE (₹)</th>
-              <th>TAX (18%)</th>
-              <th>AMOUNT (₹)</th>
-              <th className="no-print">ACTION</th>
+              <th style={{ width: '6%' }}>S.NO.</th>
+              <th style={{ width: '38%' }}>ITEMS</th>
+              <th style={{ width: '12%' }}>HSN</th>
+              <th style={{ width: '10%' }}>QTY.</th>
+              <th style={{ width: '12%' }}>RATE</th>
+              <th style={{ width: '10%' }}>TAX</th>
+              <th style={{ width: '12%' }}>AMOUNT</th>
+              <th style={{ width: '4%' }} className="no-print">ACTION</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item, idx) => {
-              const vals = calculateItemValues(item);
-
+              const vals = calculateRowValues(item);
               return (
                 <tr key={idx}>
-                  <td>{item.sNo}</td>
-                  <td className="suggestion-cell">
+                  <td className="text-center">{item.sNo}</td>
+                  <td className="suggestion-cell text-left">
                     <input
                       type="text"
                       name="itemDescription"
-                      placeholder="Type product name ..."
+                      placeholder="Item Description"
                       value={item.itemDescription}
                       onChange={(e) => handleItemChange(idx, e)}
                       onFocus={() => setActiveSuggestionRow(idx)}
                       onBlur={() => setTimeout(() => setActiveSuggestionRow(null), 200)}
-                      className="editable-input full-width"
+                      className="form-control-input"
+                      style={{ width: '100%', fontWeight: 'bold' }}
                       autoComplete="off"
                     />
-                    {/* Live Database Search Suggestions Dropdown */}
                     {activeSuggestionRow === idx && suggestions.length > 0 && (
                       <ul className="suggestions-dropdown no-print">
-                        {suggestions.map((product, sIdx) => (
-                          <li
-                            key={sIdx}
-                            onMouseDown={() => handleSelectSuggestion(idx, product)}
-                          >
-                            <strong>{product.itemDescription}</strong>
-                            <span>HSN: {product.hsnSac || 'N/A'} | Rate: ₹{product.rate}</span>
+                        {suggestions.map((p, sIdx) => (
+                          <li key={sIdx} onMouseDown={() => selectSuggestion(idx, p)}>
+                            <strong>{p.itemDescription}</strong>
+                            <div style={{ fontSize: '10px', color: '#64748b' }}>HSN: {p.hsnSac} | Rate: ₹{p.rate}</div>
                           </li>
                         ))}
                       </ul>
@@ -418,11 +396,10 @@ const InvoiceApp = () => {
                     <input
                       type="text"
                       name="hsnSac"
-                      placeholder="HSN"
                       value={item.hsnSac}
                       onChange={(e) => handleItemChange(idx, e)}
-                      className="editable-input text-center"
-                      style={{ width: '80px' }}
+                      className="form-control-input text-center"
+                      style={{ width: '100%' }}
                     />
                   </td>
                   <td>
@@ -431,8 +408,8 @@ const InvoiceApp = () => {
                       name="qty"
                       value={item.qty}
                       onChange={(e) => handleItemChange(idx, e)}
-                      className="editable-input text-center"
-                      style={{ width: '60px' }}
+                      className="form-control-input text-center"
+                      style={{ width: '100%' }}
                     />
                   </td>
                   <td>
@@ -441,15 +418,18 @@ const InvoiceApp = () => {
                       name="rate"
                       value={item.rate}
                       onChange={(e) => handleItemChange(idx, e)}
-                      className="editable-input text-right"
-                      style={{ width: '90px' }}
+                      className="form-control-input text-right"
+                      style={{ width: '100%' }}
                     />
                   </td>
-                  <td>{vals.taxAmount.toFixed(2)}</td>
-                  <td><strong>{vals.totalAmount.toFixed(2)}</strong></td>
+                  <td className="text-right">
+                    {vals.taxAmount.toFixed(2)}<br />
+                    <span style={{ fontSize: '9px', color: '#666' }}>(18%)</span>
+                  </td>
+                  <td className="text-right"><strong>₹ {vals.totalAmount.toFixed(2)}</strong></td>
                   <td className="no-print text-center">
                     {invoice.items.length > 1 && (
-                      <button className="btn-remove" onClick={() => removeItemRow(idx)}>X</button>
+                      <button className="btn-delete-row" onClick={() => removeItemRow(idx)}>✕</button>
                     )}
                   </td>
                 </tr>
@@ -458,51 +438,44 @@ const InvoiceApp = () => {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan="8" className="no-print text-left">
-                <button className="btn-add" onClick={addItemRow}>+ Add Item Row</button>
-              </td>
-            </tr>
-            <tr>
               <td colSpan="3" className="text-right"><strong>TOTAL</strong></td>
-              <td><strong>{summary.totalQty}</strong></td>
+              <td className="text-center"><strong>{totals.totalQty}</strong></td>
               <td></td>
-              <td><strong>₹ {summary.totalTax.toFixed(2)}</strong></td>
-              <td colSpan="2"><strong>₹ {summary.totalAmount.toFixed(2)}</strong></td>
+              <td className="text-right"><strong>₹ {totals.totalTax.toFixed(2)}</strong></td>
+              <td className="text-right"><strong>₹ {totals.grandTotal.toFixed(2)}</strong></td>
+              <td className="no-print"></td>
             </tr>
             <tr>
               <td colSpan="6" className="text-right"><strong>RECEIVED AMOUNT</strong></td>
-              <td colSpan="2">
-                <input
-                  type="number"
-                  name="receivedAmount"
-                  value={invoice.receivedAmount}
-                  onChange={handleChange}
-                  className="editable-input text-right"
-                  style={{ width: '100px', fontWeight: 'bold' }}
-                />
-              </td>
+              <td className="text-right"><strong>₹ {Number(invoice.receivedAmount || 0).toFixed(2)}</strong></td>
+              <td className="no-print"></td>
             </tr>
           </tfoot>
         </table>
+
+        {/* Add Row Button */}
+        <div style={{ margin: '8px 0' }} className="no-print">
+          <button className="btn-add-item" onClick={addItemRow}>+ Add Item Row</button>
+        </div>
 
         {/* Tax Breakdown Table */}
         <table className="tax-table">
           <thead>
             <tr>
               <th rowSpan="2">HSN/SAC</th>
-              <th rowSpan="2">Taxable Value (₹)</th>
+              <th rowSpan="2">Taxable Value</th>
               <th colSpan="2">CGST</th>
               <th colSpan="2">SGST</th>
-              <th rowSpan="2">Total Tax Amount (₹)</th>
+              <th rowSpan="2">Total Tax Amount</th>
             </tr>
             <tr>
-              <th>Rate</th><th>Amount (₹)</th>
-              <th>Rate</th><th>Amount (₹)</th>
+              <th>Rate</th><th>Amount</th>
+              <th>Rate</th><th>Amount</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item, idx) => {
-              const vals = calculateItemValues(item);
+              const vals = calculateRowValues(item);
               return (
                 <tr key={idx}>
                   <td>{item.hsnSac || 'N/A'}</td>
@@ -518,19 +491,27 @@ const InvoiceApp = () => {
           </tbody>
         </table>
 
-        {/* Bank & Signature Details */}
+        {/* Amount In Words Section */}
+        <div style={{ border: '1px solid #000', padding: '6px', margin: '8px 0' }}>
+          <strong>Total Amount (in words)</strong><br />
+          <span>{numberToWords(totals.grandTotal)}</span>
+        </div>
+
+        {/* Bank & Signature Section */}
         <div className="grid-2 footer-section">
           <div className="box">
-            <p><strong>Bank Details</strong></p>
-            <p>Name: {invoice.sellerName}</p>
-            <p>IFSC Code: {invoice.bankIfsc}</p>
-            <p>Account No: {invoice.bankAccountNo}</p>
-            <p>Bank: {invoice.bankName}</p>
+            <strong>Bank Details</strong><br />
+            <strong>Name:</strong> {invoice.Name}<br />
+            <strong>IFSC Code:</strong> {invoice.bankIfsc}<br />
+            <strong>Account No:</strong> {invoice.bankAccountNo}<br />
+            <strong>Bank:</strong> {invoice.bankName}
           </div>
           <div className="box sign-box">
-            <p>Authorised Signatory For</p>
-            <br />
-            <strong>{invoice.sellerName}</strong>
+            <div></div>
+            <div>
+              <p style={{ margin: '0 0 4px 0' }}>Authorised Signatory For</p>
+              <strong>{invoice.sellerName}</strong>
+            </div>
           </div>
         </div>
       </div>
