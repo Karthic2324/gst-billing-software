@@ -4,7 +4,8 @@ import InvoiceHistory from './InvoiceHistory';
 import Login from './Login';
 import { isAuthenticated, removeToken, getUser } from './auth';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+// Set default fallback to live Render backend production URL
+const BASE_URL = (process.env.REACT_APP_API_URL || 'https://om-muruga-auto-electrical-works.onrender.com').replace(/\/$/, '');
 
 function App() {
   const [authed, setAuthed] = useState(isAuthenticated());
