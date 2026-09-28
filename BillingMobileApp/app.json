@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "BillingMobileApp",
+    "slug": "BillingMobileApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-sharing"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5e845931-0b64-4830-aa81-a6adeeb9f5ca"
+      }
+    },
+    "android": {
+      "package": "com.karthick23.BillingMobileApp"
+    }
+  }
+}
