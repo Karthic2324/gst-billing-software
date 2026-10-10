@@ -1,0 +1,10 @@
+# Ignore parent git tracking and backend files
+../backend
+../pom.xml
+node_modules/
+.expo/
+dist/
+android/
+node_modules/
+.expo/
+dist/

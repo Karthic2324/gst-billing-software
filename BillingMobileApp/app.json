@@ -1,21 +1,27 @@
 {
   "expo": {
-    "name": "BillingMobileApp",
+    "name": "Om Muruga Auto Electrical Works",
     "slug": "BillingMobileApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "plugins": [
-      "expo-sharing"
-    ],
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.karthick23.BillingMobileApp"
+    },
     "extra": {
       "eas": {
         "projectId": "5e845931-0b64-4830-aa81-a6adeeb9f5ca"
       }
-    },
-    "android": {
-      "package": "com.karthick23.BillingMobileApp"
     }
   }
 }
