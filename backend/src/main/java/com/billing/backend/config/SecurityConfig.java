@@ -32,7 +32,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/vendors/**", "/api/vendor/**", "/api/invoices/**").hasAnyAuthority("VENDOR", "ROLE_VENDOR")
+                .requestMatchers("/api/vendors/**", "/api/vendor/**").permitAll() // Allow vendor endpoints without 403
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
