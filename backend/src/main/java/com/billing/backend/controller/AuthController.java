@@ -1,11 +1,8 @@
 package com.billing.backend.controller;
 
-import com.billing.backend.dto.LoginRequest;
-import com.billing.backend.model.Role;
 import com.billing.backend.model.User;
 import com.billing.backend.repository.UserRepository;
-import com.billing.backend.security.JwtTokenProvider;
-import org.springframework.http.HttpStatus;
+import com.billing.backend.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -20,61 +17,45 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtUtil jwtUtil;
 
-    public AuthController(UserRepository userRepository, 
-                           PasswordEncoder passwordEncoder, 
-                           JwtTokenProvider jwtTokenProvider) {
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtUtil = jwtUtil;
     }
 
-    // 1. REGISTER NEW USER
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String username = request.get("username");
         String password = request.get("password");
 
-        if (userRepository.findByUsername(username).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
+        if (username == null || password == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required"));
         }
 
-        User user = new User();
-        user.setUsername(username);
-        // ENCRYPT PASSWORD BEFORE SAVING
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole(Role.ROLE_VENDOR); // Default role
+        Optional<User> userOpt = userRepository.findByUsername(username);
 
-        userRepository.save(user);
-
-        return ResponseEntity.ok(Map.of("message", "User registered successfully!"));
-    }
-
-    // 2. LOGIN USER
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
-
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
         }
 
-        User user = userOptional.get();
+        User user = userOpt.get();
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+        if (!user.isActive()) {
+            return ResponseEntity.status(403).body(Map.of("message", "Account is deactivated. Contact Master Admin."));
         }
 
-        // Generate JWT token for the authenticated user
-        String token = jwtTokenProvider.generateToken(user.getUsername(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Login successful");
         response.put("token", token);
+        response.put("userId", user.getId());
         response.put("username", user.getUsername());
         response.put("role", user.getRole());
-        response.put("tenantId", user.getTenantId());
+        response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : user.getUsername());
+        response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "N/A");
+        response.put("phone", user.getPhone() != null ? user.getPhone() : "");
 
         return ResponseEntity.ok(response);
     }
