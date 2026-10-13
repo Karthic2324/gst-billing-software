@@ -20,13 +20,11 @@ public class AdminController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Fetch all vendor accounts for Master Admin dashboard
     @GetMapping("/vendors")
     public ResponseEntity<List<User>> getAllVendors() {
         return ResponseEntity.ok(userRepository.findByRole("ROLE_VENDOR"));
     }
 
-    // Create a new vendor account with credentials and GST details
     @PostMapping("/vendors/create")
     public ResponseEntity<?> createVendorAccount(@RequestBody User vendor) {
         if (userRepository.findByUsername(vendor.getUsername()).isPresent()) {
@@ -39,7 +37,6 @@ public class AdminController {
         return ResponseEntity.ok(saved);
     }
 
-    // Edit vendor account details
     @PutMapping("/vendors/{id}")
     public ResponseEntity<?> updateVendorAccount(@PathVariable Long id, @RequestBody User details) {
         User existing = userRepository.findById(id)
@@ -49,14 +46,13 @@ public class AdminController {
         existing.setGstNumber(details.getGstNumber());
         existing.setPhone(details.getPhone());
         existing.setEmail(details.getEmail());
-        if (details.getPassword() != null && !details.getPassword().isEmpty()) {
+        if (details.getPassword() != null && !details.getPassword().trim().isEmpty()) {
             existing.setPassword(passwordEncoder.encode(details.getPassword()));
         }
         User updated = userRepository.save(existing);
         return ResponseEntity.ok(updated);
     }
 
-    // Toggle active status (Block/Unblock Vendor)
     @PatchMapping("/vendors/{id}/toggle-status")
     public ResponseEntity<?> toggleVendorStatus(@PathVariable Long id) {
         User vendor = userRepository.findById(id)

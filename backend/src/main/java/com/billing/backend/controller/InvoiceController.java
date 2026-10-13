@@ -22,19 +22,17 @@ public class InvoiceController {
         this.userRepository = userRepository;
     }
 
-    // Vendor creates invoice tied strictly to their logged-in account
     @PostMapping
     public ResponseEntity<?> createInvoice(@RequestBody Invoice invoice, Authentication authentication) {
         String username = authentication.getName();
         User vendor = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Logged in vendor user not found"));
+                .orElseThrow(() -> new RuntimeException("Vendor account not found"));
 
         invoice.setVendor(vendor);
         Invoice saved = invoiceRepository.save(invoice);
         return ResponseEntity.ok(saved);
     }
 
-    // Returns isolated history for the logged in vendor (or all for admin)
     @GetMapping("/my-history")
     public ResponseEntity<List<Invoice>> getMyHistory(Authentication authentication) {
         String username = authentication.getName();
@@ -48,7 +46,6 @@ public class InvoiceController {
         }
     }
 
-    // Master Admin endpoint: Inspect history for a specific vendor ID
     @GetMapping("/admin/vendor/{vendorId}")
     public ResponseEntity<List<Invoice>> getVendorHistoryForAdmin(@PathVariable Long vendorId) {
         return ResponseEntity.ok(invoiceRepository.findByVendorIdOrderByIdDesc(vendorId));

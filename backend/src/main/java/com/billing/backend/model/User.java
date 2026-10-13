@@ -24,6 +24,7 @@ public class User {
     @Column(nullable = false)
     private String role; // "ROLE_ADMIN" or "ROLE_VENDOR"
 
+    @Column(nullable = false)
     private boolean active = true;
 
     public User() {}
