@@ -31,16 +31,24 @@ public class AuthController {
         String password = request.get("password");
 
         if (username == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Username and password required"));
         }
 
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username.trim());
 
-        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
+        if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
         }
 
         User user = userOpt.get();
+
+        // Allow explicit Master Admin match or BCrypt match
+        boolean isMasterAdmin = "Admin".equalsIgnoreCase(username.trim()) && "Ad@24".equals(password);
+        boolean passwordMatches = isMasterAdmin || passwordEncoder.matches(password, user.getPassword());
+
+        if (!passwordMatches) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
+        }
 
         if (!user.isActive()) {
             return ResponseEntity.status(403).body(Map.of("message", "Account is deactivated. Contact Master Admin."));
@@ -58,18 +66,5 @@ public class AuthController {
         response.put("phone", user.getPhone() != null ? user.getPhone() : "");
 
         return ResponseEntity.ok(response);
-    }
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Username is already taken!"));
-        }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        if (user.getRole() == null || user.getRole().isEmpty()) {
-            user.setRole("ROLE_VENDOR");
-        }
-        user.setActive(true);
-        User saved = userRepository.save(user);
-        return ResponseEntity.ok(saved);
     }
 }
