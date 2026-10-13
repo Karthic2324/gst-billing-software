@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -26,39 +27,23 @@ public class AdminController {
     }
 
     @PostMapping("/vendors/create")
-    public ResponseEntity<?> createVendorAccount(@RequestBody User vendor) {
-        if (userRepository.findByUsername(vendor.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Username already exists!");
+    public ResponseEntity<?> createVendor(@RequestBody User user) {
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username already exists"));
         }
-        vendor.setPassword(passwordEncoder.encode(vendor.getPassword()));
-        vendor.setRole("ROLE_VENDOR");
-        vendor.setActive(true);
-        User saved = userRepository.save(vendor);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole("ROLE_VENDOR");
+        user.setActive(true);
+        User saved = userRepository.save(user);
         return ResponseEntity.ok(saved);
-    }
-
-    @PutMapping("/vendors/{id}")
-    public ResponseEntity<?> updateVendorAccount(@PathVariable Long id, @RequestBody User details) {
-        User existing = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vendor not found"));
-
-        existing.setBusinessName(details.getBusinessName());
-        existing.setGstNumber(details.getGstNumber());
-        existing.setPhone(details.getPhone());
-        existing.setEmail(details.getEmail());
-        if (details.getPassword() != null && !details.getPassword().trim().isEmpty()) {
-            existing.setPassword(passwordEncoder.encode(details.getPassword()));
-        }
-        User updated = userRepository.save(existing);
-        return ResponseEntity.ok(updated);
     }
 
     @PatchMapping("/vendors/{id}/toggle-status")
     public ResponseEntity<?> toggleVendorStatus(@PathVariable Long id) {
-        User vendor = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vendor not found"));
-        vendor.setActive(!vendor.isActive());
-        userRepository.save(vendor);
-        return ResponseEntity.ok(vendor);
+        return userRepository.findById(id).map(user -> {
+            user.setActive(!user.isActive());
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("message", "Status updated successfully"));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }
