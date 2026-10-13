@@ -27,15 +27,32 @@ public class AdminController {
     }
 
     @PostMapping("/vendors/create")
-    public ResponseEntity<?> createVendor(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Username already exists"));
+    public ResponseEntity<?> createVendor(@RequestBody User vendorRequest) {
+        try {
+            if (vendorRequest.getUsername() == null || vendorRequest.getPassword() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required"));
+            }
+
+            if (userRepository.findByUsernameIgnoreCase(vendorRequest.getUsername().trim()).isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Vendor username already exists"));
+            }
+
+            User newVendor = new User();
+            newVendor.setUsername(vendorRequest.getUsername().trim());
+            // Encode raw password directly
+            newVendor.setPassword(passwordEncoder.encode(vendorRequest.getPassword().trim()));
+            newVendor.setRole("ROLE_VENDOR");
+            newVendor.setActive(true);
+            newVendor.setBusinessName(vendorRequest.getBusinessName() != null ? vendorRequest.getBusinessName().trim() : vendorRequest.getUsername());
+            newVendor.setGstNumber(vendorRequest.getGstNumber() != null ? vendorRequest.getGstNumber().trim() : "N/A");
+            newVendor.setPhone(vendorRequest.getPhone() != null ? vendorRequest.getPhone().trim() : "");
+            newVendor.setEmail(vendorRequest.getEmail() != null ? vendorRequest.getEmail().trim() : "");
+
+            User saved = userRepository.save(newVendor);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Error creating vendor: " + e.getMessage()));
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("ROLE_VENDOR");
-        user.setActive(true);
-        User saved = userRepository.save(user);
-        return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/vendors/{id}/toggle-status")

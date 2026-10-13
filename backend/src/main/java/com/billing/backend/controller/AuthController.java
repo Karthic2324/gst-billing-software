@@ -34,6 +34,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Username and password required"));
         }
 
+        // Case-insensitive lookup (works for "vendor1", "Vendor1", "VENDOR1")
         Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username.trim());
 
         if (userOpt.isEmpty()) {
@@ -42,7 +43,7 @@ public class AuthController {
 
         User user = userOpt.get();
 
-        // Allow explicit Master Admin match or BCrypt match
+        // Master Admin Hardcoded Bypass OR BCrypt Verification
         boolean isMasterAdmin = "Admin".equalsIgnoreCase(username.trim()) && "Ad@24".equals(password);
         boolean passwordMatches = isMasterAdmin || passwordEncoder.matches(password, user.getPassword());
 
