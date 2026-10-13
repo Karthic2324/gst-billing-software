@@ -59,4 +59,17 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username is already taken!"));
+        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (user.getRole() == null || user.getRole().isEmpty()) {
+            user.setRole("ROLE_VENDOR");
+        }
+        user.setActive(true);
+        User saved = userRepository.save(user);
+        return ResponseEntity.ok(saved);
+    }
 }
