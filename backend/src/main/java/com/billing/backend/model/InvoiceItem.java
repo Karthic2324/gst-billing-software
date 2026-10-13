@@ -1,6 +1,5 @@
 package com.billing.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -16,21 +15,8 @@ public class InvoiceItem {
     private Double price;
     private Double total;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id")
-    @JsonIgnore
-    private Invoice invoice;
-
     public InvoiceItem() {}
 
-    public InvoiceItem(String description, Integer quantity, Double price, Double total) {
-        this.description = description;
-        this.quantity = quantity;
-        this.price = price;
-        this.total = total;
-    }
-
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -45,7 +31,4 @@ public class InvoiceItem {
 
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }
-
-    public Invoice getInvoice() { return invoice; }
-    public void setInvoice(Invoice invoice) { this.invoice = invoice; }
 }
