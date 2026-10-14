@@ -68,4 +68,22 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/reset-vendor")
+    public ResponseEntity<?> resetVendorAccount(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String rawPassword = request.get("password");
+
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
+        User user = userOpt.orElseGet(User::new);
+
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole("ROLE_VENDOR");
+        user.setActive(true);
+        user.setBusinessName("Om Muruga Auto Electrical Works");
+        user.setGstNumber("33DSSPS7678B1Z2");
+
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", "Vendor account created/updated with encoded password successfully!"));
+    }
 }
