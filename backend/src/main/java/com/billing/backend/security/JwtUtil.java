@@ -7,31 +7,35 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtUtil {
 
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    // Stable 256-bit secret key string
+    private static final String SECRET_KEY_STRING = "GST_BILLING_SOFTWARE_SECRET_KEY_2026_SECURE_JWT_TOKEN_123456";
     private final long expirationMs = 86400000; // 24 hours
+
+    private Key getSigningKey() {
+        byte[] keyBytes = SECRET_KEY_STRING.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
     // Single argument method
     public String generateToken(String username) {
         return generateToken(username, "ROLE_VENDOR");
     }
 
-    // Overloaded two-argument method that handles role claims
+    // Overloaded method handling role claims and authority prefix
     public String generateToken(String username, String role) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", role);
-
+        String formattedRole = (role != null && role.startsWith("ROLE_")) ? role : "ROLE_" + (role != null ? role : "ADMIN");
+        
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(username)
+                .claim("role", formattedRole)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(key)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 }
