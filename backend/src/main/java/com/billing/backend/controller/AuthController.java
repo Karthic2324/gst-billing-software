@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,42 +31,33 @@ public class AuthController {
         String password = request.get("password");
 
         if (username == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Username and password required"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required."));
         }
 
-        // Case-insensitive lookup (works for "vendor1", "Vendor1", "VENDOR1")
+        // Case-insensitive user lookup
         Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username.trim());
 
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password."));
         }
 
         User user = userOpt.get();
 
-        // Master Admin Hardcoded Bypass OR BCrypt Verification
-        boolean isMasterAdmin = "Admin".equalsIgnoreCase(username.trim()) && "Ad@24".equals(password);
-        boolean passwordMatches = isMasterAdmin || passwordEncoder.matches(password, user.getPassword());
-
-        if (!passwordMatches) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password"));
+        // Check hashed password using PasswordEncoder matches
+        if (!passwordEncoder.matches(password.trim(), user.getPassword())) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password."));
         }
 
-        if (!user.isActive()) {
-            return ResponseEntity.status(403).body(Map.of("message", "Account is deactivated. Contact Master Admin."));
-        }
-
+        // Generate token with explicitly formatted role
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("userId", user.getId());
-        response.put("username", user.getUsername());
-        response.put("role", user.getRole());
-        response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : user.getUsername());
-        response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "N/A");
-        response.put("phone", user.getPhone() != null ? user.getPhone() : "");
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+            "token", token,
+            "role", user.getRole(),
+            "userId", user.getId(),
+            "businessName", user.getBusinessName() != null ? user.getBusinessName() : user.getUsername(),
+            "gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "N/A"
+        ));
     }
     @PostMapping("/reset-vendor")
     public ResponseEntity<?> resetVendorAccount(@RequestBody Map<String, String> request) {
