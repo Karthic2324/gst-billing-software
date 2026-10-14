@@ -27,40 +27,41 @@ public class AdminController {
     }
 
     @PostMapping("/vendors/create")
-    public ResponseEntity<?> createVendor(@RequestBody User vendorRequest) {
+    public ResponseEntity<?> createVendor(@RequestBody Map<String, String> request) {
         try {
-            if (vendorRequest.getUsername() == null || vendorRequest.getPassword() == null) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required"));
+            String username = request.get("username");
+            String password = request.get("password");
+            String businessName = request.get("businessName");
+            String gstNumber = request.get("gstNumber");
+            String phone = request.get("phone");
+            String email = request.get("email");
+
+            if (username == null || username.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Username is required"));
+            }
+            if (password == null || password.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
             }
 
-            if (userRepository.findByUsernameIgnoreCase(vendorRequest.getUsername().trim()).isPresent()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Vendor username already exists"));
+            if (userRepository.findByUsernameIgnoreCase(username.trim()).isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Vendor username already exists!"));
             }
 
             User newVendor = new User();
-            newVendor.setUsername(vendorRequest.getUsername().trim());
-            // Encode raw password directly
-            newVendor.setPassword(passwordEncoder.encode(vendorRequest.getPassword().trim()));
+            newVendor.setUsername(username.trim());
+            newVendor.setPassword(passwordEncoder.encode(password.trim()));
             newVendor.setRole("ROLE_VENDOR");
             newVendor.setActive(true);
-            newVendor.setBusinessName(vendorRequest.getBusinessName() != null ? vendorRequest.getBusinessName().trim() : vendorRequest.getUsername());
-            newVendor.setGstNumber(vendorRequest.getGstNumber() != null ? vendorRequest.getGstNumber().trim() : "N/A");
-            newVendor.setPhone(vendorRequest.getPhone() != null ? vendorRequest.getPhone().trim() : "");
-            newVendor.setEmail(vendorRequest.getEmail() != null ? vendorRequest.getEmail().trim() : "");
+            newVendor.setBusinessName(businessName != null && !businessName.trim().isEmpty() ? businessName.trim() : username.trim());
+            newVendor.setGstNumber(gstNumber != null && !gstNumber.trim().isEmpty() ? gstNumber.trim() : "N/A");
+            newVendor.setPhone(phone != null ? phone.trim() : "");
+            newVendor.setEmail(email != null ? email.trim() : "");
 
             User saved = userRepository.save(newVendor);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "Error creating vendor: " + e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", "Database Error: " + e.getMessage()));
         }
-    }
-
-    @PatchMapping("/vendors/{id}/toggle-status")
-    public ResponseEntity<?> toggleVendorStatus(@PathVariable Long id) {
-        return userRepository.findById(id).map(user -> {
-            user.setActive(!user.isActive());
-            userRepository.save(user);
-            return ResponseEntity.ok(Map.of("message", "Status updated successfully"));
-        }).orElse(ResponseEntity.notFound().build());
     }
 }
