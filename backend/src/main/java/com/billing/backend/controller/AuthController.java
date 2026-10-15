@@ -27,60 +27,59 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        String loginInput = request.get("email"); // Can be email OR username
-        if (loginInput == null) {
-            loginInput = request.get("username");
+        String input = request.get("email");
+        if (input == null || input.trim().isEmpty()) {
+            input = request.get("username");
         }
         String password = request.get("password");
 
-        if (loginInput == null || password == null) {
-            return ResponseEntity.status(400).body(Map.of("error", "Username/Email and Password are required"));
+        if (input == null || password == null) {
+            Map<String, String> err = new HashMap<>();
+            err.put("error", "Username/Email and Password are required");
+            return ResponseEntity.badRequest().body(err);
         }
 
-        // Search by Email first; if not found, search by Username
-        Optional<User> userOptional = userRepository.findByEmail(loginInput);
-        if (userOptional.isEmpty()) {
-            userOptional = userRepository.findByUsername(loginInput);
+        // Try searching by email first, then username
+        Optional<User> userOpt = userRepository.findByEmail(input.trim());
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findByUsername(input.trim());
         }
-        if (userOptional.isEmpty()) {
-            userOptional = userRepository.findByUsernameIgnoreCase(loginInput);
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findByUsernameIgnoreCase(input.trim());
         }
 
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
             if (passwordEncoder.matches(password, user.getPassword())) {
-                String token = jwtUtil.generateToken(user.getEmail() != null ? user.getEmail() : user.getUsername(), user.getRole());
+                String token = jwtUtil.generateToken(
+                    user.getEmail() != null ? user.getEmail() : user.getUsername(),
+                    user.getRole() != null ? user.getRole() : "ROLE_VENDOR"
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("token", token);
                 response.put("id", user.getId());
                 response.put("username", user.getUsername());
+                response.put("email", user.getEmail());
+                response.put("role", user.getRole());
                 response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : "Om Muruga Auto Electrical Works");
                 response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "33DSSPS7678B1Z2");
-                response.put("address", user.getAddress() != null ? user.getAddress() : "6/1, Siddhi Vinayagar Colony, Linganoor, Siruvani Road, Veerakeralam, Coimbatore - 641 007.");
-                response.put("email", user.getEmail());
-                response.put("phone", user.getPhone() != null ? user.getPhone() : "9976765151 / 8098986464");
-                response.put("bankName", user.getBankName() != null ? user.getBankName() : "ICICI Bank");
-                response.put("bankAccountNo", user.getBankAccountNo() != null ? user.getBankAccountNo() : "417905500050");
-                response.put("bankIfsc", user.getBankIfsc() != null ? user.getBankIfsc() : "ICIC0004179");
-                response.put("bankBranch", user.getBankBranch() != null ? user.getBankBranch() : "Coimbatore");
 
                 return ResponseEntity.ok(response);
             }
         }
 
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Invalid email/username or password");
-        return ResponseEntity.status(401).body(errorResponse);
+        Map<String, String> err = new HashMap<>();
+        err.put("error", "Invalid username/email or password");
+        return ResponseEntity.status(401).body(err);
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        if (user.getEmail() != null && userRepository.findByEmail(user.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email already in use"));
-        }
-        if (user.getUsername() != null && userRepository.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username already in use"));
+        if (user.getEmail() != null && !user.getEmail().isEmpty() && userRepository.findByEmail(user.getEmail()).isPresent()) {
+            Map<String, String> err = new HashMap<>();
+            err.put("error", "Email already in use");
+            return ResponseEntity.badRequest().body(err);
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));

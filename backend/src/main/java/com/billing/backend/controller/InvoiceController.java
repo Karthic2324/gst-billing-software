@@ -23,7 +23,6 @@ public class InvoiceController {
         this.userRepository = userRepository;
     }
 
-    // Handles both POST /api/invoices and POST /api/invoices/create
     @PostMapping({"", "/create"})
     public ResponseEntity<?> createInvoice(@RequestBody Invoice invoice, Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
@@ -41,7 +40,6 @@ public class InvoiceController {
             invoice.setCreatedAt(LocalDateTime.now());
         }
 
-        // Link child items to the parent invoice for cascade persistence
         if (invoice.getItems() != null) {
             invoice.getItems().forEach(item -> item.setInvoice(invoice));
         }
@@ -50,7 +48,6 @@ public class InvoiceController {
         return ResponseEntity.ok(saved);
     }
 
-    // Handles both GET /api/invoices and GET /api/invoices/my-history
     @GetMapping({"", "/my-history"})
     public ResponseEntity<List<Invoice>> getMyHistory(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -68,10 +65,5 @@ public class InvoiceController {
         } else {
             return ResponseEntity.ok(invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId()));
         }
-    }
-
-    @GetMapping("/admin/vendor/{vendorId}")
-    public ResponseEntity<List<Invoice>> getVendorHistoryForAdmin(@PathVariable Long vendorId) {
-        return ResponseEntity.ok(invoiceRepository.findByVendorIdOrderByIdDesc(vendorId));
     }
 }
