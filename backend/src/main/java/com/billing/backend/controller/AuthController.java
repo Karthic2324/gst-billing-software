@@ -27,19 +27,34 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
+        String loginInput = request.get("email"); // Can be email OR username
+        if (loginInput == null) {
+            loginInput = request.get("username");
+        }
         String password = request.get("password");
 
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (loginInput == null || password == null) {
+            return ResponseEntity.status(400).body(Map.of("error", "Username/Email and Password are required"));
+        }
+
+        // Search by Email first; if not found, search by Username
+        Optional<User> userOptional = userRepository.findByEmail(loginInput);
+        if (userOptional.isEmpty()) {
+            userOptional = userRepository.findByUsername(loginInput);
+        }
+        if (userOptional.isEmpty()) {
+            userOptional = userRepository.findByUsernameIgnoreCase(loginInput);
+        }
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             if (passwordEncoder.matches(password, user.getPassword())) {
-                String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+                String token = jwtUtil.generateToken(user.getEmail() != null ? user.getEmail() : user.getUsername(), user.getRole());
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("token", token);
                 response.put("id", user.getId());
+                response.put("username", user.getUsername());
                 response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : "Om Muruga Auto Electrical Works");
                 response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "33DSSPS7678B1Z2");
                 response.put("address", user.getAddress() != null ? user.getAddress() : "6/1, Siddhi Vinayagar Colony, Linganoor, Siruvani Road, Veerakeralam, Coimbatore - 641 007.");
@@ -55,16 +70,17 @@ public class AuthController {
         }
 
         Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Invalid email or password");
+        errorResponse.put("error", "Invalid email/username or password");
         return ResponseEntity.status(401).body(errorResponse);
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Email already in use");
-            return ResponseEntity.badRequest().body(errorResponse);
+        if (user.getEmail() != null && userRepository.findByEmail(user.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email already in use"));
+        }
+        if (user.getUsername() != null && userRepository.findByUsername(user.getUsername()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Username already in use"));
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
