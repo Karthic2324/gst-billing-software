@@ -33,7 +33,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-                .requestMatchers("/api/invoices/**").authenticated() // Allows any authenticated user to create/view invoices
+                .requestMatchers("/api/invoices/**").authenticated()
                 .requestMatchers("/api/vendor/**").authenticated()
                 .anyRequest().authenticated()
             )

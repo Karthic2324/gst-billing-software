@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,64 +27,52 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
+        String email = request.get("email");
         String password = request.get("password");
 
-        if (username == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Username and password are required."));
+        Optional<User> userOptional = userRepository.findByEmail(email);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("id", user.getId());
+                response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : "Om Muruga Auto Electrical Works");
+                response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "33DSSPS7678B1Z2");
+                response.put("address", user.getAddress() != null ? user.getAddress() : "6/1, Siddhi Vinayagar Colony, Linganoor, Siruvani Road, Veerakeralam, Coimbatore - 641 007.");
+                response.put("email", user.getEmail());
+                response.put("phone", user.getPhone() != null ? user.getPhone() : "9976765151 / 8098986464");
+                response.put("bankName", user.getBankName() != null ? user.getBankName() : "ICICI Bank");
+                response.put("bankAccountNo", user.getBankAccountNo() != null ? user.getBankAccountNo() : "417905500050");
+                response.put("bankIfsc", user.getBankIfsc() != null ? user.getBankIfsc() : "ICIC0004179");
+                response.put("bankBranch", user.getBankBranch() != null ? user.getBankBranch() : "Coimbatore");
+
+                return ResponseEntity.ok(response);
+            }
         }
 
-        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username.trim());
-
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password."));
-        }
-
-        User user = userOpt.get();
-
-        if (!passwordEncoder.matches(password.trim(), user.getPassword())) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid username or password."));
-        }
-
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
-
-        return ResponseEntity.ok(Map.of(
-            "token", token,
-            "role", user.getRole(),
-            "userId", user.getId(),
-            "businessName", user.getBusinessName() != null ? user.getBusinessName() : "OM MURUGA AUTO ELECTRICAL WORKS",
-            "gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "33DSSPS7678B1Z2",
-            "address", user.getAddress() != null ? user.getAddress() : "NO. 214 Sakthi Nagar, Main Road, Coimbatore, Tamil Nadu, 641006",
-            "email", user.getEmail() != null ? user.getEmail() : "om.muruga.electricals@gmail.com",
-            "bankName", user.getBankName() != null ? user.getBankName() : "ICICI Bank",
-            "bankAccountNo", user.getBankAccountNo() != null ? user.getBankAccountNo() : "417905500050",
-            "bankIfsc", user.getBankIfsc() != null ? user.getBankIfsc() : "ICIC0004179",
-            "bankBranch", user.getBankBranch() != null ? user.getBankBranch() : "Coimbatore Main Branch"
-        ));
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", "Invalid email or password");
+        return ResponseEntity.status(401).body(errorResponse);
     }
 
-    @PostMapping("/reset-vendor")
-    public ResponseEntity<?> resetVendorAccount(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String rawPassword = request.get("password");
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Email already in use");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
 
-        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
-        User user = userOpt.orElseGet(User::new);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (user.getRole() == null || user.getRole().isEmpty()) {
+            user.setRole("ROLE_VENDOR");
+        }
 
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setRole("ROLE_VENDOR");
-        user.setActive(true);
-        user.setBusinessName("OM MURUGA AUTO ELECTRICAL WORKS");
-        user.setGstNumber("33DSSPS7678B1Z2");
-        user.setAddress("NO. 214 Sakthi Nagar, Main Road, Coimbatore, Tamil Nadu, 641006");
-        user.setEmail("om.muruga.electricals@gmail.com");
-        user.setBankName("ICICI Bank");
-        user.setBankAccountNo("417905500050");
-        user.setBankIfsc("ICIC0004179");
-        user.setBankBranch("Coimbatore Main Branch");
-
-        userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "Vendor account created/updated with encoded password successfully!"));
+        User savedUser = userRepository.save(user);
+        return ResponseEntity.ok(savedUser);
     }
 }
