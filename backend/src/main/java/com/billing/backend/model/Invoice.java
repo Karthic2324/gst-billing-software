@@ -1,8 +1,8 @@
 package com.billing.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,18 +16,17 @@ public class Invoice {
     private String customerName;
     private String customerPhone;
     private Double subtotal;
-    private Double taxAmount;
-    private Double totalAmount;
+    private Double totalGst;
+    private Double grandTotal;
+    private LocalDateTime createdAt;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "vendor_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "vendor_id")
     private User vendor;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "invoice_id")
-    private List<InvoiceItem> items = new ArrayList<>();
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<InvoiceItem> items;
 
     public Invoice() {}
 
@@ -43,11 +42,11 @@ public class Invoice {
     public Double getSubtotal() { return subtotal; }
     public void setSubtotal(Double subtotal) { this.subtotal = subtotal; }
 
-    public Double getTaxAmount() { return taxAmount; }
-    public void setTaxAmount(Double taxAmount) { this.taxAmount = taxAmount; }
+    public Double getTotalGst() { return totalGst; }
+    public void setTotalGst(Double totalGst) { this.totalGst = totalGst; }
 
-    public Double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
+    public Double getGrandTotal() { return grandTotal; }
+    public void setGrandTotal(Double grandTotal) { this.grandTotal = grandTotal; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

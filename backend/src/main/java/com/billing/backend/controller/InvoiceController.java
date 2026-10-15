@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -22,24 +23,47 @@ public class InvoiceController {
         this.userRepository = userRepository;
     }
 
-    @PostMapping
+    // Handles both POST /api/invoices and POST /api/invoices/create
+    @PostMapping({"", "/create"})
     public ResponseEntity<?> createInvoice(@RequestBody Invoice invoice, Authentication authentication) {
-        String username = authentication.getName();
-        User vendor = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Vendor account not found"));
+        if (authentication != null && authentication.isAuthenticated()) {
+            String identifier = authentication.getName();
+            User vendor = userRepository.findByEmail(identifier)
+                    .orElseGet(() -> userRepository.findByUsername(identifier)
+                            .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
 
-        invoice.setVendor(vendor);
+            if (vendor != null) {
+                invoice.setVendor(vendor);
+            }
+        }
+
+        if (invoice.getCreatedAt() == null) {
+            invoice.setCreatedAt(LocalDateTime.now());
+        }
+
+        // Link child items to the parent invoice for cascade persistence
+        if (invoice.getItems() != null) {
+            invoice.getItems().forEach(item -> item.setInvoice(invoice));
+        }
+
         Invoice saved = invoiceRepository.save(invoice);
         return ResponseEntity.ok(saved);
     }
 
-    @GetMapping("/my-history")
+    // Handles both GET /api/invoices and GET /api/invoices/my-history
+    @GetMapping({"", "/my-history"})
     public ResponseEntity<List<Invoice>> getMyHistory(Authentication authentication) {
-        String username = authentication.getName();
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
 
-        if ("ROLE_ADMIN".equals(currentUser.getRole())) {
+        String identifier = authentication.getName();
+        User currentUser = userRepository.findByEmail(identifier)
+                .orElseGet(() -> userRepository.findByUsername(identifier)
+                        .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier)
+                                .orElseThrow(() -> new RuntimeException("User not found"))));
+
+        if ("ROLE_ADMIN".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
             return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
         } else {
             return ResponseEntity.ok(invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId()));
