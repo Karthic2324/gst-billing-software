@@ -23,9 +23,10 @@ public class InvoiceController {
         this.userRepository = userRepository;
     }
 
-    @PostMapping({"", "/create"})
+@PostMapping({"", "/create"})
     public ResponseEntity<?> createInvoice(@RequestBody Invoice invoice, Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
+        // 1. Try to set vendor from authenticated token if present
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
             String identifier = authentication.getName();
             User vendor = userRepository.findByEmail(identifier)
                     .orElseGet(() -> userRepository.findByUsername(identifier)
@@ -36,14 +37,22 @@ public class InvoiceController {
             }
         }
 
+        // 2. Fallback: If no valid auth context, assign default vendor Omaew
+        if (invoice.getVendor() == null) {
+            userRepository.findByUsernameIgnoreCase("Omaew").ifPresent(invoice::setVendor);
+        }
+
+        // 3. Set creation date if missing
         if (invoice.getCreatedAt() == null) {
             invoice.setCreatedAt(LocalDateTime.now());
         }
 
+        // 4. Bind parent invoice reference to child items for JPA cascade
         if (invoice.getItems() != null) {
             invoice.getItems().forEach(item -> item.setInvoice(invoice));
         }
 
+        // 5. Save directly to Neon PostgreSQL database
         Invoice saved = invoiceRepository.save(invoice);
         return ResponseEntity.ok(saved);
     }
