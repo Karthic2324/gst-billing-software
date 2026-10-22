@@ -33,7 +33,7 @@ public class AuthController {
         }
         String password = request.get("password");
 
-        if (input == null || password == null) {
+        if (input == null || password == null || input.trim().isEmpty() || password.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Username/Email and Password are required"));
         }
 
@@ -49,28 +49,26 @@ public class AuthController {
         User user;
         if (userOpt.isPresent()) {
             user = userOpt.get();
-            // Try standard password check
             boolean matches = false;
             try {
                 matches = passwordEncoder.matches(password, user.getPassword());
             } catch (Exception e) {
-                // If stored password hash in SQL was malformed, re-encode it automatically
                 matches = false;
             }
 
             if (!matches) {
-                // Self-healing fallback for development vendor account
-                if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password)) {
+                // Auto-healing fallback for development vendor account
+                if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password.trim())) {
                     user.setPassword(passwordEncoder.encode("omaew@27"));
                     userRepository.save(user);
                     matches = true;
                 } else {
-                    return ResponseEntity.status(401).body(Map.of("error", "Invalid username/email or password"));
+                    return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
                 }
             }
         } else {
-            // Auto-create vendor user if logging in for the first time
-            if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password)) {
+            // Auto-create missing vendor user if credentials match development defaults
+            if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password.trim())) {
                 user = new User();
                 user.setUsername("Omaew");
                 user.setEmail("omaew@gmail.com");
@@ -86,7 +84,7 @@ public class AuthController {
                 user.setBankBranch("Coimbatore");
                 user = userRepository.save(user);
             } else {
-                return ResponseEntity.status(401).body(Map.of("error", "User not found"));
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
             }
         }
 
@@ -98,11 +96,13 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("id", user.getId());
+        response.put("userId", user.getId());
         response.put("username", user.getUsername());
         response.put("email", user.getEmail());
-        response.put("role", user.getRole());
-        response.put("businessName", user.getBusinessName());
-        response.put("gstNumber", user.getGstNumber());
+        response.put("role", user.getRole() != null ? user.getRole() : "ROLE_VENDOR");
+        response.put("businessName", user.getBusinessName() != null ? user.getBusinessName() : user.getUsername());
+        response.put("gstNumber", user.getGstNumber() != null ? user.getGstNumber() : "N/A");
+        response.put("phone", user.getPhone() != null ? user.getPhone() : "");
 
         return ResponseEntity.ok(response);
     }
