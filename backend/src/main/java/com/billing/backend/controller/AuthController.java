@@ -26,49 +26,55 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
-        String input = request.get("email");
-        if (input == null || input.trim().isEmpty()) {
-            input = request.get("username");
-        }
-        String password = request.get("password");
-
-        if (input == null || password == null || input.trim().isEmpty() || password.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username/Email and Password are required"));
+    public ResponseEntity<?> login(@RequestBody Map<String, Object> request) {
+        String input = request.get("username") != null ? request.get("username").toString().trim() : null;
+        if (input == null || input.isEmpty()) {
+            input = request.get("email") != null ? request.get("email").toString().trim() : null;
         }
 
-        String searchKey = input.trim();
-        Optional<User> userOpt = userRepository.findByEmail(searchKey);
+        String password = request.get("password") != null ? request.get("password").toString().trim() : null;
+
+        if (input == null || password == null || input.isEmpty() || password.isEmpty()) {
+            Map<String, String> err = new HashMap<>();
+            err.put("error", "Username/Email and Password are required");
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        // Look up by Email or Username (Case-Insensitive)
+        Optional<User> userOpt = userRepository.findByEmail(input);
         if (userOpt.isEmpty()) {
-            userOpt = userRepository.findByUsername(searchKey);
+            userOpt = userRepository.findByUsername(input);
         }
         if (userOpt.isEmpty()) {
-            userOpt = userRepository.findByUsernameIgnoreCase(searchKey);
+            userOpt = userRepository.findByUsernameIgnoreCase(input);
         }
 
         User user;
         if (userOpt.isPresent()) {
             user = userOpt.get();
             boolean matches = false;
+
             try {
                 matches = passwordEncoder.matches(password, user.getPassword());
             } catch (Exception e) {
                 matches = false;
             }
 
+            // Automatic password reset/healing for development account
             if (!matches) {
-                // Auto-healing fallback for development vendor account
-                if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password.trim())) {
+                if (("Omaew".equalsIgnoreCase(input) || "omaew@gmail.com".equalsIgnoreCase(input)) && "omaew@27".equals(password)) {
                     user.setPassword(passwordEncoder.encode("omaew@27"));
                     userRepository.save(user);
                     matches = true;
                 } else {
-                    return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
+                    Map<String, String> err = new HashMap<>();
+                    err.put("error", "Invalid username or password");
+                    return ResponseEntity.status(401).body(err);
                 }
             }
         } else {
-            // Auto-create missing vendor user if credentials match development defaults
-            if (("Omaew".equalsIgnoreCase(searchKey) || "omaew@gmail.com".equalsIgnoreCase(searchKey)) && "omaew@27".equals(password.trim())) {
+            // Auto-create Omaew account if missing
+            if (("Omaew".equalsIgnoreCase(input) || "omaew@gmail.com".equalsIgnoreCase(input)) && "omaew@27".equals(password)) {
                 user = new User();
                 user.setUsername("Omaew");
                 user.setEmail("omaew@gmail.com");
@@ -84,7 +90,9 @@ public class AuthController {
                 user.setBankBranch("Coimbatore");
                 user = userRepository.save(user);
             } else {
-                return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
+                Map<String, String> err = new HashMap<>();
+                err.put("error", "Invalid username or password");
+                return ResponseEntity.status(401).body(err);
             }
         }
 
