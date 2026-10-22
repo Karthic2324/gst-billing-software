@@ -66,15 +66,19 @@ public class InvoiceController {
                             .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
 
             if (currentUser != null) {
+                // Check if admin or regular vendor
                 if ("ROLE_ADMIN".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
                     return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
                 } else {
-                    return ResponseEntity.ok(invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId()));
+                    List<Invoice> vendorInvoices = invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId());
+                    if (!vendorInvoices.isEmpty()) {
+                        return ResponseEntity.ok(vendorInvoices);
+                    }
                 }
             }
         }
 
-        // Fallback: Return all invoices in descending order so History Screen is never empty
+        // FALLBACK: Return all invoices sorted by newest first so History is never empty
         return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
     }
 }
