@@ -1,6 +1,7 @@
 package com.billing.backend.controller;
 
 import com.billing.backend.model.Invoice;
+import com.billing.backend.model.InvoiceItem;
 import com.billing.backend.model.User;
 import com.billing.backend.repository.InvoiceRepository;
 import com.billing.backend.repository.UserRepository;
@@ -9,7 +10,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/invoices")
@@ -23,41 +26,49 @@ public class InvoiceController {
         this.userRepository = userRepository;
     }
 
-@PostMapping({"", "/create"})
+    @PostMapping({"", "/create"})
     public ResponseEntity<?> createInvoice(@RequestBody Invoice invoice, Authentication authentication) {
-        // 1. Try to set vendor from authenticated token if present
-        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
-            String identifier = authentication.getName();
-            User vendor = userRepository.findByEmail(identifier)
-                    .orElseGet(() -> userRepository.findByUsername(identifier)
-                            .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
-
-            if (vendor != null) {
-                invoice.setVendor(vendor);
+        try {
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+                String identifier = authentication.getName();
+                User vendor = userRepository.findByEmail(identifier)
+                        .orElseGet(() -> userRepository.findByUsername(identifier)
+                                .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
+                if (vendor != null) {
+                    invoice.setVendor(vendor);
+                }
             }
-        }
 
-        // 2. Fallback: If no valid auth context, assign default vendor Omaew
-        if (invoice.getVendor() == null) {
-            userRepository.findByUsernameIgnoreCase("Omaew").ifPresent(invoice::setVendor);
-        }
+            if (invoice.getVendor() == null) {
+                userRepository.findByUsernameIgnoreCase("Omaew").ifPresent(invoice::setVendor);
+            }
 
-        // 3. Set creation date if missing
-        if (invoice.getCreatedAt() == null) {
-            invoice.setCreatedAt(LocalDateTime.now());
-        }
+            if (invoice.getCreatedAt() == null) {
+                invoice.setCreatedAt(LocalDateTime.now());
+            }
 
-        // 4. Bind parent invoice reference to child items for JPA cascade
-        if (invoice.getItems() != null) {
-            invoice.getItems().forEach(item -> item.setInvoice(invoice));
-        }
+            if (invoice.getItems() != null) {
+                for (InvoiceItem item : invoice.getItems()) {
+                    item.setInvoice(invoice);
+                }
+            }
 
-        // 5. Save directly to Neon PostgreSQL database
-        Invoice saved = invoiceRepository.save(invoice);
-        return ResponseEntity.ok(saved);
+            Invoice saved = invoiceRepository.save(invoice);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "SUCCESS");
+            response.put("message", "Invoice saved successfully");
+            response.put("id", saved.getId());
+            response.put("createdAt", saved.getCreatedAt());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to save invoice: " + e.getMessage()));
+        }
     }
 
-@GetMapping({"", "/my-history"})
+    @GetMapping({"", "/my-history"})
     public ResponseEntity<?> getMyHistory(Authentication authentication) {
         try {
             if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
@@ -67,7 +78,7 @@ public class InvoiceController {
                                 .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
 
                 if (currentUser != null && currentUser.getId() != null) {
-                    if ("ROLE_ADMIN".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
+                    if ("ROLE_ADMIN".equalsIgnoreCase(currentUser.getRole()) || "ADMIN".equalsIgnoreCase(currentUser.getRole())) {
                         return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
                     } else {
                         List<Invoice> vendorInvoices = invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId());
@@ -77,11 +88,11 @@ public class InvoiceController {
                     }
                 }
             }
+            return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
         } catch (Exception e) {
-            System.err.println("Error fetching history: " + e.getMessage());
+            System.err.println("Error inside getMyHistory: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
         }
-
-        // GUARANTEED FALLBACK: Return all invoices sorted newest to oldest so history is never empty
-        return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
     }
 }

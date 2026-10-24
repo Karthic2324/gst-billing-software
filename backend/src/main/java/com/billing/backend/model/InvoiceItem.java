@@ -13,8 +13,8 @@ public class InvoiceItem {
 
     private String description;
     private String hsn;
-    private Integer quantity;
     private Double price;
+    private Integer quantity;
     private Double gstRate;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,26 +22,73 @@ public class InvoiceItem {
     @JsonBackReference
     private Invoice invoice;
 
-    public InvoiceItem() {}
+    public InvoiceItem() {
+    }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public InvoiceItem(Long id, String description, String hsn, Double price, Integer quantity, Double gstRate, Invoice invoice) {
+        this.id = id;
+        this.description = description;
+        this.hsn = hsn;
+        this.price = price;
+        this.quantity = quantity;
+        this.gstRate = gstRate;
+        this.invoice = invoice;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
 
-    public String getHsn() { return hsn; }
-    public void setHsn(String hsn) { this.hsn = hsn; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public String getDescription() {
+        return description;
+    }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public Double getGstRate() { return gstRate; }
-    public void setGstRate(Double gstRate) { this.gstRate = gstRate; }
+    public String getHsn() {
+        return hsn;
+    }
 
-    public Invoice getInvoice() { return invoice; }
-    public void setInvoice(Invoice invoice) { this.invoice = invoice; }
+    public void setHsn(String hsn) {
+        this.hsn = hsn;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public Double getGstRate() {
+        return gstRate;
+    }
+
+    public void setGstRate(Double gstRate) {
+        this.gstRate = gstRate;
+    }
+
+    public Invoice getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(Invoice invoice) {
+        this.invoice = invoice;
+    }
 }
