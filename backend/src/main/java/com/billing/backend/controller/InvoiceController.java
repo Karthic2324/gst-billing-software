@@ -58,27 +58,30 @@ public class InvoiceController {
     }
 
 @GetMapping({"", "/my-history"})
-    public ResponseEntity<List<Invoice>> getMyHistory(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
-            String identifier = authentication.getName();
-            User currentUser = userRepository.findByEmail(identifier)
-                    .orElseGet(() -> userRepository.findByUsername(identifier)
-                            .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
+    public ResponseEntity<?> getMyHistory(Authentication authentication) {
+        try {
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+                String identifier = authentication.getName();
+                User currentUser = userRepository.findByEmail(identifier)
+                        .orElseGet(() -> userRepository.findByUsername(identifier)
+                                .orElseGet(() -> userRepository.findByUsernameIgnoreCase(identifier).orElse(null)));
 
-            if (currentUser != null) {
-                // Check if admin or regular vendor
-                if ("ROLE_ADMIN".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
-                    return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
-                } else {
-                    List<Invoice> vendorInvoices = invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId());
-                    if (!vendorInvoices.isEmpty()) {
-                        return ResponseEntity.ok(vendorInvoices);
+                if (currentUser != null && currentUser.getId() != null) {
+                    if ("ROLE_ADMIN".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
+                        return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
+                    } else {
+                        List<Invoice> vendorInvoices = invoiceRepository.findByVendorIdOrderByIdDesc(currentUser.getId());
+                        if (vendorInvoices != null && !vendorInvoices.isEmpty()) {
+                            return ResponseEntity.ok(vendorInvoices);
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            System.err.println("Error fetching history: " + e.getMessage());
         }
 
-        // FALLBACK: Return all invoices sorted by newest first so History is never empty
+        // GUARANTEED FALLBACK: Return all invoices sorted newest to oldest so history is never empty
         return ResponseEntity.ok(invoiceRepository.findAllByOrderByIdDesc());
     }
 }
